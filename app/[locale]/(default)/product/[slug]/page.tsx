@@ -110,6 +110,25 @@ export default async function Product({ params, searchParams }: Props) {
     return notFound();
   }
 
+  // BC's swatch `imageUrl` is a tiny auto-generated preview (~120px). Build a
+  // lookup from option-value entityId -> the full-size variant image so the
+  // swatch popover can show something sharper than the swatch thumbnail.
+  const popoverImageByValueId = new Map<number, { src: string; alt: string }>();
+
+  removeEdgesAndNodes(baseProduct.variants).forEach((variant) => {
+    if (!variant.defaultImage) return;
+
+    const image = { src: variant.defaultImage.url, alt: variant.defaultImage.altText };
+
+    removeEdgesAndNodes(variant.options).forEach((option) => {
+      removeEdgesAndNodes(option.values).forEach((value) => {
+        if (!popoverImageByValueId.has(value.entityId)) {
+          popoverImageByValueId.set(value.entityId, image);
+        }
+      });
+    });
+  });
+
   const streamableProduct = Streamable.from(async () => {
     const variables = {
       entityId: Number(productId),
@@ -585,7 +604,7 @@ export default async function Product({ params, searchParams }: Props) {
           ctaLabel={streameableCtaLabel}
           decrementLabel={t('ProductDetails.decreaseQuantity')}
           emptySelectPlaceholder={t('ProductDetails.emptySelectPlaceholder')}
-          fields={productOptionsTransformer(baseProduct.productOptions)}
+          fields={productOptionsTransformer(baseProduct.productOptions, popoverImageByValueId)}
           incrementLabel={t('ProductDetails.increaseQuantity')}
           loadMoreImagesAction={getMoreProductImages}
           prefetch={true}

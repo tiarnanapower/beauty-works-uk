@@ -28,7 +28,7 @@ runtime.registerComponent(MSSlideshow, {
           title: TextInput({ label: 'Title', defaultValue: 'Slide title' }),
           showDescription: Checkbox({ label: 'Show description', defaultValue: true }),
           description: TextArea({ label: 'Description', defaultValue: 'Slide description' }),
-          imageSrc: Image(),
+          imageSrc: Image({ format: Image.Format.WithDimensions }),
           imageAlt: TextInput({ label: 'Image alt', defaultValue: 'Slide image' }),
           showButton: Checkbox({ label: 'Show button', defaultValue: true }),
           buttonText: TextInput({ label: 'Button text', defaultValue: 'Shop all' }),

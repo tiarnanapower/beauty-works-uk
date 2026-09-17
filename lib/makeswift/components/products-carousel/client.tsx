@@ -24,6 +24,7 @@ export function MSProductsCarousel({
   limit,
   additionalProducts,
   hideOverflow,
+  visibleProducts,
   ...props
 }: MSProductsCarouselProps) {
   const additionalProductIds = additionalProducts.map(({ entityId }) => entityId ?? '');
@@ -34,11 +35,23 @@ export function MSProductsCarousel({
   });
 
   if (isLoading) {
-    return <ProductsCarouselSkeleton className={className} hideOverflow={hideOverflow} />;
+    return (
+      <ProductsCarouselSkeleton
+        className={className}
+        hideOverflow={hideOverflow}
+        visibleProducts={visibleProducts}
+      />
+    );
   }
 
   if (products == null || products.length === 0) {
-    return <ProductsCarouselSkeleton className={className} hideOverflow={hideOverflow} />;
+    return (
+      <ProductsCarouselSkeleton
+        className={className}
+        hideOverflow={hideOverflow}
+        visibleProducts={visibleProducts}
+      />
+    );
   }
 
   return (
@@ -47,6 +60,7 @@ export function MSProductsCarousel({
       className={className}
       hideOverflow={hideOverflow}
       products={products}
+      visibleProducts={visibleProducts}
     />
   );
 }

@@ -106,18 +106,22 @@ export const Header = async () => {
     // const currencyCode = await getPreferredCurrencyCode();
     const categoryTree = (await getHeaderLinks(customerAccessToken, currencyCode)).categoryTree;
 
-    /**  To prevent the navigation menu from overflowing, we limit the number of categories to 6.
+    /**  To prevent the navigation menu from overflowing, we limit the number of categories to 10.
    To show a full list of categories, modify the `slice` method to remove the limit.
    Will require modification of navigation menu styles to accommodate the additional categories.
    */
-    const slicedTree = categoryTree.slice(0, 6);
+    const slicedTree = categoryTree.slice(0, 10);
 
-    return slicedTree.map(({ name, path, children }) => ({
+    return slicedTree.map(({ name, path, image, children }) => ({
       label: name,
       href: path,
+      image: image ? { src: image.url, alt: image.altText } : undefined,
       groups: children.map((firstChild) => ({
         label: firstChild.name,
         href: firstChild.path,
+        image: firstChild.image
+          ? { src: firstChild.image.url, alt: firstChild.image.altText }
+          : undefined,
         links: firstChild.children.map((secondChild) => ({
           label: secondChild.name,
           href: secondChild.path,

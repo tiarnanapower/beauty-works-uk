@@ -32,6 +32,29 @@ export interface ProductCarouselProps {
   showButtons?: boolean;
   showScrollbar?: boolean;
   hideOverflow?: boolean;
+  visibleProducts?: number;
+}
+
+// Tailwind's JIT scanner only generates CSS for class names it can find as
+// literal strings in source, so the per-item "basis" width for each visible-
+// products count is spelled out here in full rather than built up from
+// concatenated pieces. Degrades to fewer items on smaller screens the same
+// way the original fixed 1/2/3/4 breakpoints did, capped at the chosen max
+// for the largest breakpoint.
+const BASIS_CLASSES_BY_VISIBLE_PRODUCTS: Record<number, string> = {
+  1: 'basis-full pl-4 @2xl:pl-5',
+  2: 'basis-full pl-4 @md:basis-1/2 @lg:basis-1/2 @2xl:basis-1/2 @2xl:pl-5',
+  3: 'basis-full pl-4 @md:basis-1/2 @lg:basis-1/3 @2xl:basis-1/3 @2xl:pl-5',
+  4: 'basis-full pl-4 @md:basis-1/2 @lg:basis-1/3 @2xl:basis-1/4 @2xl:pl-5',
+  5: 'basis-full pl-4 @md:basis-1/2 @lg:basis-1/3 @2xl:basis-1/5 @2xl:pl-5',
+  6: 'basis-full pl-4 @md:basis-1/2 @lg:basis-1/3 @2xl:basis-1/6 @2xl:pl-5',
+};
+
+function getBasisClassName(visibleProducts = 4) {
+  return (
+    BASIS_CLASSES_BY_VISIBLE_PRODUCTS[Math.min(Math.max(Math.round(visibleProducts), 1), 6)] ??
+    BASIS_CLASSES_BY_VISIBLE_PRODUCTS[4]
+  );
 }
 
 // eslint-disable-next-line valid-jsdoc
@@ -64,6 +87,7 @@ export function ProductCarousel({
   showButtons = true,
   showScrollbar = true,
   hideOverflow = true,
+  visibleProducts = 4,
 }: ProductCarouselProps) {
   return (
     <Stream
@@ -72,6 +96,7 @@ export function ProductCarousel({
           className={className}
           hideOverflow={hideOverflow}
           placeholderCount={placeholderCount}
+          visibleProducts={visibleProducts}
         />
       }
       value={streamableProducts}
@@ -86,6 +111,7 @@ export function ProductCarousel({
               emptyStateTitle={emptyStateTitle}
               hideOverflow={hideOverflow}
               placeholderCount={placeholderCount}
+              visibleProducts={visibleProducts}
             />
           );
         }
@@ -94,10 +120,7 @@ export function ProductCarousel({
           <Carousel className={className} hideOverflow={hideOverflow}>
             <CarouselContent className="-ml-4 mb-10 @2xl:-ml-5">
               {products.map(({ id, ...product }) => (
-                <CarouselItem
-                  className="basis-full pl-4 @md:basis-1/2 @lg:basis-1/3 @2xl:basis-1/4 @2xl:pl-5"
-                  key={id}
-                >
+                <CarouselItem className={getBasisClassName(visibleProducts)} key={id}>
                   <ProductCard
                     aspectRatio={aspectRatio}
                     colorScheme={colorScheme}
@@ -133,7 +156,11 @@ export function ProductsCarouselSkeleton({
   className,
   placeholderCount = 8,
   hideOverflow,
-}: Pick<ProductCarouselProps, 'className' | 'placeholderCount' | 'hideOverflow'>) {
+  visibleProducts,
+}: Pick<
+  ProductCarouselProps,
+  'className' | 'placeholderCount' | 'hideOverflow' | 'visibleProducts'
+>) {
   return (
     <Skeleton.Root
       className={clsx('group-has-data-pending/product-carousel:animate-pulse', className)}
@@ -144,7 +171,7 @@ export function ProductsCarouselSkeleton({
         <div className="-ml-4 flex @2xl:-ml-5">
           {Array.from({ length: placeholderCount }).map((_, index) => (
             <div
-              className="min-w-0 shrink-0 grow-0 basis-full pl-4 @md:basis-1/2 @lg:basis-1/3 @2xl:basis-1/4 @2xl:pl-5"
+              className={clsx('min-w-0 shrink-0 grow-0', getBasisClassName(visibleProducts))}
               key={index}
             >
               <ProductCardSkeleton />
@@ -170,6 +197,7 @@ export function ProductsCarouselEmptyState({
   emptyStateSubtitle,
   hideOverflow,
   colorScheme = 'light',
+  visibleProducts,
 }: Pick<
   ProductCarouselProps,
   | 'className'
@@ -178,6 +206,7 @@ export function ProductsCarouselEmptyState({
   | 'emptyStateSubtitle'
   | 'hideOverflow'
   | 'colorScheme'
+  | 'visibleProducts'
 >) {
   return (
     <Skeleton.Root className={clsx('relative', className)} hideOverflow={hideOverflow}>
@@ -185,7 +214,7 @@ export function ProductsCarouselEmptyState({
         <div className="-ml-4 flex [mask-image:linear-gradient(to_bottom,_black_0%,_transparent_90%)] @2xl:-ml-5">
           {Array.from({ length: placeholderCount }).map((_, index) => (
             <div
-              className="min-w-0 shrink-0 grow-0 basis-full pl-4 @md:basis-1/2 @lg:basis-1/3 @2xl:basis-1/4 @2xl:pl-5"
+              className={clsx('min-w-0 shrink-0 grow-0', getBasisClassName(visibleProducts))}
               key={index}
             >
               <ProductCardSkeleton />

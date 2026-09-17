@@ -73,6 +73,23 @@ export function ProductGallery({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('');
+  const [isZoomed, setIsZoomed] = useState(false);
+  // Percentage-based transform-origin the zoomed image scales from - moving
+  // it under the pointer is what makes the enlarged image appear to pan,
+  // without needing to compute/clamp a separate translate offset.
+  const [panPosition, setPanPosition] = useState({ x: 50, y: 50 });
+
+  const updatePanPosition = (
+    event: { clientX: number; clientY: number },
+    currentTarget: HTMLElement,
+  ) => {
+    const rect = currentTarget.getBoundingClientRect();
+
+    setPanPosition({
+      x: Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100)),
+      y: Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100)),
+    });
+  };
 
   const scrollListenerRef = useRef<() => void>(() => undefined);
   const listenForScrollRef = useRef(true);
@@ -83,6 +100,23 @@ export function ProductGallery({
     containScroll: 'keepSnaps',
     dragFree: true,
   });
+
+  // `useState(initialImages)` only seeds state on mount - when a variant
+  // selection changes without a full page navigation, this same client
+  // component instance persists and the prop update would otherwise be
+  // ignored, leaving the gallery showing the previously-selected variant's
+  // images. Re-sync whenever the server sends a different image set.
+  useEffect(() => {
+    setImages(initialImages);
+    setPageInfo(initialPageInfo);
+    setHasMoreToLoad(initialPageInfo?.hasNextPage ?? false);
+    setSelectedIndex(0);
+    setIsZoomed(false);
+    setPanPosition({ x: 50, y: 50 });
+    emblaApi?.goTo(0);
+    emblaThumbsApi?.goTo(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialImages]);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -100,6 +134,8 @@ export function ProductGallery({
   const onSelect = useCallback(() => {
     if (!emblaApi || !emblaThumbsApi) return;
     setSelectedIndex(emblaApi.selectedSnap());
+    setIsZoomed(false);
+    setPanPosition({ x: 50, y: 50 });
 
     emblaThumbsApi.goTo(emblaApi.selectedSnap());
   }, [emblaApi, emblaThumbsApi]);
@@ -259,20 +295,62 @@ export function ProductGallery({
               )}
               key={idx}
             >
-              <Image
-                alt={image.alt}
+              <button
+                aria-label={isZoomed && idx === selectedIndex ? 'Zoom out' : 'Zoom in'}
                 className={clsx(
-                  'bg-[var(--product-gallery-image-background,hsl(var(--contrast-100)))]',
-                  {
-                    contain: 'object-contain',
-                    cover: 'object-cover',
-                  }[fit],
+                  'absolute inset-0 size-full transition-transform duration-300 ease-out',
+                  idx === selectedIndex && isZoomed
+                    ? 'z-10 scale-[2] cursor-zoom-out'
+                    : 'cursor-zoom-in',
                 )}
-                fill
-                preload={idx === 0}
-                sizes="(min-width: 42rem) 50vw, 100vw"
-                src={image.src}
-              />
+                onClick={(event) => {
+                  if (isZoomed) {
+                    // Leave panPosition as-is (rather than recentering) so the
+                    // shrink-back-down animation collapses toward wherever
+                    // the pointer currently is instead of snapping to center
+                    // first. It gets a fresh value on the next zoom-in anyway.
+                    setIsZoomed(false);
+
+                    return;
+                  }
+
+                  updatePanPosition(event, event.currentTarget);
+                  setIsZoomed(true);
+                }}
+                onMouseMove={(event) => {
+                  if (!isZoomed || idx !== selectedIndex) return;
+
+                  updatePanPosition(event, event.currentTarget);
+                }}
+                onTouchMove={(event) => {
+                  if (!isZoomed || idx !== selectedIndex) return;
+
+                  const touch = event.touches[0];
+
+                  if (touch) updatePanPosition(touch, event.currentTarget);
+                }}
+                style={
+                  idx === selectedIndex
+                    ? { transformOrigin: `${panPosition.x}% ${panPosition.y}%` }
+                    : undefined
+                }
+                type="button"
+              >
+                <Image
+                  alt={image.alt}
+                  className={clsx(
+                    'bg-[var(--product-gallery-image-background,hsl(var(--contrast-100)))]',
+                    {
+                      contain: 'object-contain',
+                      cover: 'object-cover',
+                    }[fit],
+                  )}
+                  fill
+                  preload={idx === 0}
+                  sizes="(min-width: 42rem) 50vw, 100vw"
+                  src={image.src}
+                />
+              </button>
             </div>
           ))}
         </div>

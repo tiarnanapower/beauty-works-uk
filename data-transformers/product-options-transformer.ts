@@ -7,6 +7,7 @@ import { ProductOptionsFragment } from '~/app/[locale]/(default)/product/[slug]/
 
 export const productOptionsTransformer = async (
   productOptions: ResultOf<typeof ProductOptionsFragment>['productOptions'],
+  popoverImageByValueId?: Map<number, { src: string; alt: string }>,
 ) => {
   const t = await getTranslations('Product.ProductDetails');
 
@@ -35,6 +36,7 @@ export const productOptionsTransformer = async (
                       label: value.label,
                       value: value.entityId.toString(),
                       image: { src: value.imageUrl, alt: value.label },
+                      popoverImage: popoverImageByValueId?.get(value.entityId),
                     };
                   }
 

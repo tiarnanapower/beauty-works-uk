@@ -34,9 +34,17 @@ export const HeaderLinksFragment = graphql(`
     categoryTree {
       name
       path
+      image {
+        url: url(width: 400)
+        altText
+      }
       children {
         name
         path
+        image {
+          url: url(width: 400)
+          altText
+        }
         children {
           name
           path

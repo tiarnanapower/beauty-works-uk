@@ -1,4 +1,13 @@
-import { Checkbox, Group, List, Select, Slot, Style, TextInput } from '@makeswift/runtime/controls';
+import {
+  Checkbox,
+  Group,
+  List,
+  Number,
+  Select,
+  Slot,
+  Style,
+  TextInput,
+} from '@makeswift/runtime/controls';
 
 import { runtime } from '~/lib/makeswift/runtime';
 
@@ -22,6 +31,12 @@ runtime.registerComponent(MSCarousel, {
       getItemLabel(slide) {
         return slide?.name || 'Item';
       },
+    }),
+    visibleItems: Number({
+      label: 'Visible items',
+      min: 1,
+      max: 6,
+      defaultValue: 4,
     }),
     showScrollbar: Checkbox({
       label: 'Show scrollbar',

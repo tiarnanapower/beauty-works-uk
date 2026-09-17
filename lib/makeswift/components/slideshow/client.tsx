@@ -4,7 +4,7 @@ interface Slide {
   title: string;
   description: string;
   showDescription: boolean;
-  imageSrc?: string;
+  imageSrc?: { url: string; dimensions: { width: number; height: number } };
   imageAlt: string;
   showButton: boolean;
   buttonLink?: { href?: string; target?: string };
@@ -41,7 +41,14 @@ export function MSSlideshow({ className, slides, autoplay, interval }: MSAccordi
             title,
             description,
             showDescription,
-            image: imageSrc ? { alt: imageAlt, src: imageSrc } : undefined,
+            image: imageSrc
+              ? {
+                  alt: imageAlt,
+                  src: imageSrc.url,
+                  width: imageSrc.dimensions.width,
+                  height: imageSrc.dimensions.height,
+                }
+              : undefined,
             showCta: showButton,
             cta: { label: buttonText, href: buttonLink?.href ?? '#', variant: buttonColor },
           };

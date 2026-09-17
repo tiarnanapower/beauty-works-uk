@@ -16,6 +16,8 @@ export function Slideshow() {
         src: SlideBg01.src,
         alt: t('Slide01.alt'),
         blurDataUrl: SlideBg01.blurDataURL,
+        width: SlideBg01.width,
+        height: SlideBg01.height,
       },
       description: t('Slide01.description'),
       cta: {
@@ -29,6 +31,8 @@ export function Slideshow() {
         src: SlideBg02.src,
         alt: t('Slide02.alt'),
         blurDataUrl: SlideBg02.blurDataURL,
+        width: SlideBg02.width,
+        height: SlideBg02.height,
       },
       description: t('Slide02.description'),
       cta: {
@@ -42,6 +46,8 @@ export function Slideshow() {
         src: SlideBg03.src,
         alt: t('Slide03.alt'),
         blurDataUrl: SlideBg03.blurDataURL,
+        width: SlideBg03.width,
+        height: SlideBg03.height,
       },
       description: t('Slide03.description'),
       cta: {

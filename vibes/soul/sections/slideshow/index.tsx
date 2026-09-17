@@ -17,7 +17,7 @@ interface Slide {
   title: string;
   description?: string;
   showDescription?: boolean;
-  image?: { alt: string; blurDataUrl?: string; src: string };
+  image?: { alt: string; blurDataUrl?: string; src: string; width?: number; height?: number };
   cta?: {
     label: string;
     href: string;
@@ -112,6 +112,26 @@ export function Slideshow({ slides, playOnInit = true, interval = 5000, classNam
   const { selectedIndex, scrollSnaps, onProgressButtonClick } = useProgressButton(emblaApi);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playCount, setPlayCount] = useState(0);
+  // The section's height tracks the current slide's own image ratio (instead
+  // of a fixed viewport height) so `object-contain` never needs to letterbox.
+  // Known up front whenever the slide carries width/height (Makeswift's
+  // `Image.Format.WithDimensions` control, or a static import's
+  // `StaticImageData`); for any slide missing that metadata (e.g.
+  // BigCommerce-CDN images, whose GraphQL `Image` type has no width/height),
+  // fall back to measuring the image once the browser has loaded it - that
+  // slide simply stays hidden (rather than shown at a guessed size) until
+  // then, fading in already correctly sized instead of resizing visibly.
+  const [loadedAspectRatios, setLoadedAspectRatios] = useState<Record<number, number>>({});
+  const currentSlideImage = slides[selectedIndex]?.image;
+  // A plain CSS `aspect-ratio` (rather than a pixel height computed from a
+  // measured container width) is resolved by the browser purely from layout,
+  // with no client-side measurement pass - so a known ratio applies from the
+  // very first paint instead of only after an effect runs.
+  const currentAspectRatio =
+    currentSlideImage?.width != null && currentSlideImage.height != null
+      ? currentSlideImage.width / currentSlideImage.height
+      : loadedAspectRatios[selectedIndex];
+  const isReady = currentAspectRatio != null;
 
   const toggleAutoplay = useCallback(() => {
     const autoplay = emblaApi?.plugins().autoplay;
@@ -153,11 +173,19 @@ export function Slideshow({ slides, playOnInit = true, interval = 5000, classNam
   return (
     <section
       className={clsx(
-        'relative h-[80vh] bg-[var(--slideshow-background,color-mix(in_oklab,hsl(var(--primary)),black_75%))] @container',
+        'relative bg-[var(--slideshow-background,color-mix(in_oklab,hsl(var(--primary)),black_75%))] @container',
+        currentAspectRatio == null && 'h-[80vh]',
         className,
       )}
+      style={currentAspectRatio != null ? { aspectRatio: currentAspectRatio } : undefined}
     >
-      <div className="h-full overflow-hidden" ref={emblaRef}>
+      <div
+        className={clsx(
+          'h-full overflow-hidden transition-opacity duration-300',
+          isReady ? 'opacity-100' : 'opacity-0',
+        )}
+        ref={emblaRef}
+      >
         <div className="flex h-full">
           {slides.map(
             ({ title, description, showDescription = true, image, cta, showCta = true }, idx) => {
@@ -194,8 +222,20 @@ export function Slideshow({ slides, playOnInit = true, interval = 5000, classNam
                     <Image
                       alt={image.alt}
                       blurDataURL={image.blurDataUrl}
-                      className="block h-20 w-full object-cover"
+                      className="block h-20 w-full object-contain"
                       fill
+                      onLoad={(event) => {
+                        if (image.width != null && image.height != null) return;
+
+                        const { naturalWidth, naturalHeight } = event.currentTarget;
+
+                        if (naturalWidth === 0 || naturalHeight === 0) return;
+
+                        setLoadedAspectRatios((current) => ({
+                          ...current,
+                          [idx]: naturalWidth / naturalHeight,
+                        }));
+                      }}
                       placeholder={
                         image.blurDataUrl != null && image.blurDataUrl !== '' ? 'blur' : 'empty'
                       }
@@ -212,7 +252,12 @@ export function Slideshow({ slides, playOnInit = true, interval = 5000, classNam
       </div>
 
       {/* Controls */}
-      <div className="absolute bottom-4 left-1/2 flex w-full max-w-screen-2xl -translate-x-1/2 flex-wrap items-center px-4 @xl:bottom-6 @xl:px-6 @4xl:px-8">
+      <div
+        className={clsx(
+          'absolute bottom-4 left-1/2 flex w-full max-w-screen-2xl -translate-x-1/2 flex-wrap items-center px-4 transition-opacity duration-300 @xl:bottom-6 @xl:px-6 @4xl:px-8',
+          isReady ? 'opacity-100' : 'opacity-0',
+        )}
+      >
         {/* Progress Buttons */}
         {scrollSnaps.map((_: number, index: number) => {
           return (

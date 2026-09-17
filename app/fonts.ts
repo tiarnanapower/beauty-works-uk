@@ -1,9 +1,15 @@
-import { DM_Serif_Text, Inter, Roboto_Mono } from 'next/font/google';
+import { DM_Serif_Text, Inter, Mulish, Roboto_Mono } from 'next/font/google';
 
 export const inter = Inter({
   display: 'swap',
   subsets: ['latin'],
   variable: '--font-family-inter',
+});
+
+export const mulish = Mulish({
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-family-mulish',
 });
 
 export const dmSerifText = DM_Serif_Text({
@@ -19,4 +25,4 @@ export const robotoMono = Roboto_Mono({
   variable: '--font-family-roboto-mono',
 });
 
-export const fonts = [inter, dmSerifText, robotoMono];
+export const fonts = [inter, mulish, dmSerifText, robotoMono];

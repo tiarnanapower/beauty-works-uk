@@ -3,6 +3,7 @@ const config = {
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
+    './lib/**/*.{ts,tsx}',
     './vibes/**/*.{ts,tsx}',
     './node_modules/storefront-kit/dist/**/*.{js,mjs}',
   ],

@@ -34,6 +34,7 @@ import { Button } from '@/vibes/soul/primitives/button';
 import { Logo } from '@/vibes/soul/primitives/logo';
 import { Price } from '@/vibes/soul/primitives/price-label';
 import { ProductCard } from '@/vibes/soul/primitives/product-card';
+import { Image } from '~/components/image';
 import { Link } from '~/components/link';
 import { usePathname, useRouter } from '~/i18n/routing';
 import { useSearch } from '~/lib/search';
@@ -43,9 +44,11 @@ import { getLocalizedPathname } from './_actions/localized-pathname';
 interface Link {
   label: string;
   href: string;
+  image?: { src: string; alt: string };
   groups?: Array<{
     label?: string;
     href?: string;
+    image?: { src: string; alt: string };
     links: Array<{
       label: string;
       href: string;
@@ -513,36 +516,73 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
                     </Link>
                   </NavigationMenu.Trigger>
                   {item.groups != null && item.groups.length > 0 && (
-                    <NavigationMenu.Content className="rounded-2xl bg-[var(--nav-menu-background,hsl(var(--background)))] shadow-xl ring-1 ring-[var(--nav-menu-border,hsl(var(--foreground)/5%))]">
-                      <div className="m-auto grid w-full max-w-screen-lg grid-cols-5 justify-center gap-5 px-5 pb-8 pt-5">
-                        {item.groups.map((group, columnIndex) => (
-                          <ul className="flex flex-col" key={columnIndex}>
-                            {/* Second Level Links */}
-                            {group.label != null && group.label !== '' && (
-                              <li>
-                                {group.href != null && group.href !== '' ? (
-                                  <Link className={navGroupClassName} href={group.href}>
-                                    {group.label}
-                                  </Link>
-                                ) : (
-                                  <span className={navGroupClassName}>{group.label}</span>
-                                )}
-                              </li>
-                            )}
+                    <NavigationMenu.Content className="w-screen bg-[var(--nav-menu-background,hsl(var(--background)))] shadow-xl ring-1 ring-[var(--nav-menu-border,hsl(var(--foreground)/5%))]">
+                      <div className="@4xl:px-13 mx-auto flex w-full max-w-screen-2xl justify-center gap-8 px-6 pb-10 pt-6">
+                        {item.groups.map((group, columnIndex) =>
+                          group.image != null ? (
+                            <Link
+                              className="group/nav-tile flex w-full max-w-52 shrink-0 flex-col gap-3 rounded-lg ring-[var(--nav-focus,hsl(var(--primary)))] focus-visible:outline-0 focus-visible:ring-2"
+                              href={group.href ?? '#'}
+                              key={columnIndex}
+                            >
+                              <span className="relative block aspect-[4/5] w-full overflow-hidden rounded-2xl">
+                                <Image
+                                  alt={group.image.alt}
+                                  className="object-cover transition-transform duration-300 group-hover/nav-tile:scale-105"
+                                  fill
+                                  sizes="(min-width: 56rem) 15vw, 30vw"
+                                  src={group.image.src}
+                                />
+                              </span>
+                              {group.label != null && group.label !== '' && (
+                                <span className="text-center font-[family-name:var(--nav-group-font-family,var(--font-family-body))] text-sm font-semibold text-[var(--nav-group-text,hsl(var(--foreground)))]">
+                                  {group.label}
+                                </span>
+                              )}
+                            </Link>
+                          ) : (
+                            <ul className="flex w-full max-w-52 flex-col" key={columnIndex}>
+                              {/* Second Level Links */}
+                              {group.label != null && group.label !== '' && (
+                                <li>
+                                  {group.href != null && group.href !== '' ? (
+                                    <Link className={navGroupClassName} href={group.href}>
+                                      {group.label}
+                                    </Link>
+                                  ) : (
+                                    <span className={navGroupClassName}>{group.label}</span>
+                                  )}
+                                </li>
+                              )}
 
-                            {group.links.map((link, idx) => (
-                              // Third Level Links
-                              <li key={idx}>
-                                <Link
-                                  className="block rounded-lg bg-[var(--nav-sub-link-background,transparent)] px-3 py-1.5 font-[family-name:var(--nav-sub-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-sub-link-text,hsl(var(--contrast-500)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-sub-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-sub-link-text-hover,hsl(var(--foreground)))] focus-visible:outline-0 focus-visible:ring-2"
-                                  href={link.href}
-                                >
-                                  {link.label}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        ))}
+                              {group.links.map((link, idx) => (
+                                // Third Level Links
+                                <li key={idx}>
+                                  <Link
+                                    className="block rounded-lg bg-[var(--nav-sub-link-background,transparent)] px-3 py-1.5 font-[family-name:var(--nav-sub-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-sub-link-text,hsl(var(--contrast-500)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-sub-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-sub-link-text-hover,hsl(var(--foreground)))] focus-visible:outline-0 focus-visible:ring-2"
+                                    href={link.href}
+                                  >
+                                    {link.label}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          ),
+                        )}
+                        {item.image != null && (
+                          <Link
+                            className="group/nav-banner relative ml-auto hidden aspect-[3/4] w-full max-w-72 shrink-0 overflow-hidden rounded-2xl ring-[var(--nav-focus,hsl(var(--primary)))] focus-visible:outline-0 focus-visible:ring-2 @4xl:block"
+                            href={item.href}
+                          >
+                            <Image
+                              alt={item.image.alt}
+                              className="object-cover transition-transform duration-300 group-hover/nav-banner:scale-105"
+                              fill
+                              sizes="300px"
+                              src={item.image.src}
+                            />
+                          </Link>
+                        )}
                       </div>
                     </NavigationMenu.Content>
                   )}
@@ -661,8 +701,8 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
         </div>
       </div>
 
-      <div className="perspective-[2000px] absolute left-0 right-0 top-full z-50 flex w-full justify-center">
-        <NavigationMenu.Viewport className="relative mt-2 w-full data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95" />
+      <div className="perspective-[2000px] absolute left-1/2 top-full z-50 flex w-screen -translate-x-1/2 justify-center overflow-hidden">
+        <NavigationMenu.Viewport className="relative w-full origin-top data-[state=closed]:duration-200 data-[state=open]:duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2" />
       </div>
     </NavigationMenu.Root>
   );

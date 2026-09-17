@@ -10,6 +10,40 @@ export const ProductCardFragment = graphql(
         altText
         url: urlTemplate(lossy: true)
       }
+      images(first: 6) {
+        edges {
+          node {
+            altText
+            url: urlTemplate(lossy: true)
+            isDefault
+          }
+        }
+      }
+      productOptions(first: 10) {
+        edges {
+          node {
+            __typename
+            entityId
+            displayName
+            ... on MultipleChoiceOption {
+              displayStyle
+              values(first: 50) {
+                edges {
+                  node {
+                    entityId
+                    label
+                    ... on SwatchOptionValue {
+                      __typename
+                      hexColors
+                      imageUrl(lossy: true, width: 40)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
       path
       brand {
         name
@@ -39,6 +73,31 @@ export const ProductCardFragment = graphql(
                   node {
                     locationEntityId
                     backorderMessage
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      swatchVariants: variants(first: 50) {
+        edges {
+          node {
+            entityId
+            defaultImage {
+              altText
+              url: urlTemplate(lossy: true)
+            }
+            options(first: 10) {
+              edges {
+                node {
+                  entityId
+                  values(first: 50) {
+                    edges {
+                      node {
+                        entityId
+                      }
+                    }
                   }
                 }
               }

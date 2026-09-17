@@ -1,3 +1,5 @@
+'use client';
+
 import { clsx } from 'clsx';
 import { useTranslations } from 'next-intl';
 import {
@@ -17,12 +19,14 @@ import { Link } from '~/components/link';
 import { Rating } from '../rating';
 
 import { Compare } from './compare';
+import { useProductCardImageHover } from './use-product-card-image-hover';
 
 export interface Product {
   id: string;
   title: string;
   href: string;
   image?: { src: string; alt: string };
+  images?: Array<{ src: string; alt: string }>;
   price?: Price;
   subtitle?: string;
   badge?: string;
@@ -30,6 +34,15 @@ export interface Product {
   inventoryMessage?: string;
   numberOfReviews?: number;
   promotions?: Array<{ id: string; text: string }>;
+  swatches?: Array<{
+    id: string;
+    label: string;
+    color?: string;
+    imageSrc?: string;
+    image?: { src: string; alt: string };
+  }>;
+  extraSwatchCount?: number;
+  swatchOptionId?: string;
 }
 
 export interface ProductCardProps {
@@ -75,11 +88,15 @@ export function ProductCard({
     badge,
     price,
     image,
+    images,
     href,
     inventoryMessage,
     rating,
     numberOfReviews,
     promotions,
+    swatches,
+    extraSwatchCount,
+    swatchOptionId,
   },
   showRating = false,
   colorScheme = 'light',
@@ -93,6 +110,17 @@ export function ProductCard({
 }: ProductCardProps) {
   const t = useTranslations('Components.ProductCard');
 
+  const {
+    additionalImages,
+    hoverIndex,
+    displayedImage,
+    preloadImages,
+    imageContainerRef,
+    onImageMouseMove,
+    onImageMouseLeave,
+    setSwatchHoverImage,
+  } = useProductCardImageHover({ image, images, swatches });
+
   return (
     <article
       className={clsx(
@@ -100,7 +128,7 @@ export function ProductCard({
         className,
       )}
     >
-      <div className="relative">
+      <div className="relative" onMouseLeave={onImageMouseLeave} onMouseMove={onImageMouseMove}>
         <div
           className={clsx(
             'relative overflow-hidden rounded-xl @md:rounded-2xl',
@@ -114,39 +142,40 @@ export function ProductCard({
               dark: 'bg-[var(--product-card-dark-background,hsl(var(--contrast-500)))]',
             }[colorScheme],
           )}
+          ref={imageContainerRef}
         >
-          {image != null ? (
-            <Image
-              alt={image.alt}
-              className={clsx(
-                'w-full scale-100 select-none object-cover transition-transform duration-500 ease-out group-hover:scale-110',
-                {
-                  light: 'bg-[var(--product-card-light-background,hsl(var(--contrast-100))]',
-                  dark: 'bg-[var(--product-card-dark-background,hsl(var(--contrast-500))]',
-                }[colorScheme],
-              )}
-              fill
-              preload={imagePriority}
-              sizes={imageSizes}
-              src={image.src}
-            />
-          ) : (
-            <div
-              className={clsx(
-                'break-words pl-5 pt-5 text-4xl font-bold leading-[0.8] tracking-tighter opacity-25 transition-transform duration-500 ease-out group-hover:scale-105 @xs:text-7xl',
-                {
-                  light: 'text-[var(--product-card-light-title,hsl(var(--foreground)))]',
-                  dark: 'text-[var(--product-card-dark-title,hsl(var(--background)))]',
-                }[colorScheme],
-              )}
-            >
-              {title}
-            </div>
-          )}
+          <ProductCardImageStack
+            colorScheme={colorScheme}
+            displayedImage={displayedImage}
+            imagePriority={imagePriority}
+            imageSizes={imageSizes}
+            mainImageSrc={image?.src}
+            preloadImages={preloadImages}
+            title={title}
+          />
           {badge != null && badge !== '' && (
             <Badge className="absolute left-3 top-3" shape="rounded">
               {badge}
             </Badge>
+          )}
+          {additionalImages.length > 0 && (
+            <div className="absolute bottom-3 left-3 flex gap-1">
+              <span
+                className={clsx(
+                  'size-1.5 rounded-full transition-colors',
+                  hoverIndex == null ? 'bg-white' : 'bg-white/50',
+                )}
+              />
+              {additionalImages.map((additionalImage, index) => (
+                <span
+                  className={clsx(
+                    'size-1.5 rounded-full transition-colors',
+                    index === hoverIndex ? 'bg-white' : 'bg-white/50',
+                  )}
+                  key={additionalImage.src}
+                />
+              ))}
+            </div>
           )}
         </div>
 
@@ -202,6 +231,16 @@ export function ProductCard({
             {showRating && typeof rating === 'number' && rating > 0 && (
               <Rating className="mb-2 mt-1" numberOfReviews={numberOfReviews} rating={rating} />
             )}
+            {swatches != null && swatches.length > 0 && (
+              <ProductCardSwatches
+                colorScheme={colorScheme}
+                extraSwatchCount={extraSwatchCount}
+                href={href}
+                onSwatchHover={setSwatchHoverImage}
+                swatchOptionId={swatchOptionId}
+                swatches={swatches}
+              />
+            )}
             <span
               className={clsx(
                 'block text-sm font-normal',
@@ -243,6 +282,131 @@ export function ProductCard({
         </div>
       )}
     </article>
+  );
+}
+
+function ProductCardImageStack({
+  displayedImage,
+  preloadImages,
+  title,
+  colorScheme,
+  imagePriority,
+  imageSizes,
+  mainImageSrc,
+}: {
+  displayedImage?: { src: string; alt: string };
+  preloadImages: Map<string, { src: string; alt: string }>;
+  title: string;
+  colorScheme: 'light' | 'dark';
+  imagePriority: boolean;
+  imageSizes: string;
+  mainImageSrc?: string;
+}) {
+  if (displayedImage == null) {
+    return (
+      <div
+        className={clsx(
+          'break-words pl-5 pt-5 text-4xl font-bold leading-[0.8] tracking-tighter opacity-25 transition-transform duration-500 ease-out group-hover:scale-105 @xs:text-7xl',
+          {
+            light: 'text-[var(--product-card-light-title,hsl(var(--foreground)))]',
+            dark: 'text-[var(--product-card-dark-title,hsl(var(--background)))]',
+          }[colorScheme],
+        )}
+      >
+        {title}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {[...preloadImages.values()].map((candidate) => (
+        <div
+          className={clsx(
+            'absolute inset-0 transition-opacity duration-150',
+            candidate.src === displayedImage.src ? 'opacity-100' : 'pointer-events-none opacity-0',
+          )}
+          key={candidate.src}
+        >
+          <Image
+            alt={candidate.alt}
+            className={clsx(
+              'w-full scale-100 select-none object-cover transition-transform duration-500 ease-out group-hover:scale-110',
+              {
+                light: 'bg-[var(--product-card-light-background,hsl(var(--contrast-100))]',
+                dark: 'bg-[var(--product-card-dark-background,hsl(var(--contrast-500))]',
+              }[colorScheme],
+            )}
+            fill
+            preload={imagePriority && candidate.src === mainImageSrc}
+            sizes={imageSizes}
+            src={candidate.src}
+          />
+        </div>
+      ))}
+    </>
+  );
+}
+
+function ProductCardSwatches({
+  swatches,
+  extraSwatchCount,
+  swatchOptionId,
+  href,
+  colorScheme,
+  onSwatchHover,
+}: {
+  swatches: NonNullable<Product['swatches']>;
+  extraSwatchCount?: number;
+  swatchOptionId?: string;
+  href: string;
+  colorScheme: 'light' | 'dark';
+  onSwatchHover: (image: { src: string; alt: string } | null) => void;
+}) {
+  return (
+    <div
+      className="relative z-10 mt-1.5 flex items-center gap-1"
+      onMouseLeave={() => onSwatchHover(null)}
+    >
+      {swatches.map((swatch) => {
+        const swatchHref = swatchOptionId != null ? `${href}?${swatchOptionId}=${swatch.id}` : href;
+        const onMouseEnter = () => swatch.image && onSwatchHover(swatch.image);
+
+        return swatch.imageSrc != null ? (
+          <Link
+            className="relative block size-5 shrink-0 overflow-hidden rounded-full border border-[var(--product-card-light-subtitle,hsl(var(--foreground)/10%))]"
+            href={swatchHref}
+            key={swatch.id}
+            onMouseEnter={onMouseEnter}
+            title={swatch.label}
+          >
+            <Image alt={swatch.label} fill sizes="20px" src={swatch.imageSrc} />
+          </Link>
+        ) : (
+          <Link
+            className="block size-5 shrink-0 rounded-full border border-[var(--product-card-light-subtitle,hsl(var(--foreground)/10%))]"
+            href={swatchHref}
+            key={swatch.id}
+            onMouseEnter={onMouseEnter}
+            style={{ backgroundColor: swatch.color }}
+            title={swatch.label}
+          />
+        );
+      })}
+      {extraSwatchCount != null && extraSwatchCount > 0 && (
+        <span
+          className={clsx(
+            'ml-1 text-xs font-medium',
+            {
+              light: 'text-[var(--product-card-light-subtitle,hsl(var(--foreground)/75%))]',
+              dark: 'text-[var(--product-card-dark-subtitle,hsl(var(--background)/75%))]',
+            }[colorScheme],
+          )}
+        >
+          + {extraSwatchCount}
+        </span>
+      )}
+    </div>
   );
 }
 

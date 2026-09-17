@@ -121,6 +121,31 @@ export const ProductOptionsFragment = graphql(
           }
         }
       }
+      variants(first: 250) {
+        edges {
+          node {
+            entityId
+            defaultImage {
+              altText
+              url: urlTemplate(lossy: true)
+            }
+            options(first: 10) {
+              edges {
+                node {
+                  entityId
+                  values(first: 50) {
+                    edges {
+                      node {
+                        entityId
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   `,
   [

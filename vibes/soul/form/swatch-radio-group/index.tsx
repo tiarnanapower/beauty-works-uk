@@ -5,6 +5,7 @@ import * as React from 'react';
 
 import { FieldError } from '@/vibes/soul/form/field-error';
 import { Label } from '@/vibes/soul/form/label';
+import { Tooltip } from '@/vibes/soul/primitives/tooltip';
 import { Image } from '~/components/image';
 
 type SwatchOption =
@@ -20,6 +21,7 @@ type SwatchOption =
       value: string;
       label: string;
       image: { src: string; alt: string };
+      popoverImage?: { src: string; alt: string };
       disabled?: boolean;
     };
 
@@ -71,6 +73,7 @@ export const SwatchRadioGroup = React.forwardRef<
     ref,
   ) => {
     const id = React.useId();
+    const selectedOption = options.find((option) => option.value === rest.value);
 
     return (
       <div className={clsx('space-y-2', className)}>
@@ -86,74 +89,109 @@ export const SwatchRadioGroup = React.forwardRef<
           ref={ref}
           required={required}
         >
-          {options.map((option) => (
-            <RadioGroupPrimitive.Item
-              aria-label={option.label}
-              className={clsx(
-                'group relative box-content h-8 w-8 rounded-full border p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--swatch-radio-group-focus,hsl(var(--primary)))] data-[disabled]:pointer-events-none [&:disabled>.disabled-icon]:grid',
-                {
-                  light:
-                    'hover:border-[var(--swatch-radio-group-light-unchecked-border-hover,hsl(var(--contrast-200)))] data-[state=checked]:border-[var(--swatch-radio-group-light-checked-border,hsl(var(--foreground)))]',
-                  dark: 'hover:border-[var(--swatch-radio-group-dark-unchecked-border-hover,hsl(var(--contrast-400)))] data-[state=checked]:border-[var(--swatch-radio-group-dark-checked-border,hsl(var(--background)))]',
-                }[colorScheme],
-                {
-                  light:
-                    errors && errors.length > 0
-                      ? 'border-[var(--swatch-radio-group-light-border-error,hsl(var(--error)))] disabled:border-[var(--swatch-radio-group-light-disabled-border,transparent)]'
-                      : 'border-[var(--swatch-radio-group-light-unchecked-border,transparent)]',
-                  dark:
-                    errors && errors.length > 0
-                      ? 'border-[var(--swatch-radio-group-dark-border-error,hsl(var(--error)))] disabled:border-[var(--swatch-radio-group-dark-disabled-border,transparent)]'
-                      : 'border-[var(--swatch-radio-group-dark-unchecked-border,transparent)]',
-                }[colorScheme],
-              )}
-              disabled={option.disabled}
-              key={option.value}
-              onMouseEnter={() => {
-                onOptionMouseEnter?.(option.value);
-              }}
-              value={option.value}
-            >
-              {option.type === 'color' ? (
-                <span
+          {options.map((option) => {
+            const item = (
+              <RadioGroupPrimitive.Item
+                aria-label={option.label}
+                className={clsx(
+                  'group relative box-content h-8 w-8 rounded-full border p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--swatch-radio-group-focus,hsl(var(--primary)))] data-[disabled]:pointer-events-none [&:disabled>.disabled-icon]:grid',
+                  {
+                    light:
+                      'hover:border-[var(--swatch-radio-group-light-unchecked-border-hover,hsl(var(--contrast-200)))] aria-[checked=true]:border-[var(--swatch-radio-group-light-checked-border,hsl(var(--foreground)))]',
+                    dark: 'hover:border-[var(--swatch-radio-group-dark-unchecked-border-hover,hsl(var(--contrast-400)))] aria-[checked=true]:border-[var(--swatch-radio-group-dark-checked-border,hsl(var(--background)))]',
+                  }[colorScheme],
+                  {
+                    light:
+                      errors && errors.length > 0
+                        ? 'border-[var(--swatch-radio-group-light-border-error,hsl(var(--error)))] disabled:border-[var(--swatch-radio-group-light-disabled-border,transparent)]'
+                        : 'border-[var(--swatch-radio-group-light-unchecked-border,transparent)]',
+                    dark:
+                      errors && errors.length > 0
+                        ? 'border-[var(--swatch-radio-group-dark-border-error,hsl(var(--error)))] disabled:border-[var(--swatch-radio-group-dark-disabled-border,transparent)]'
+                        : 'border-[var(--swatch-radio-group-dark-unchecked-border,transparent)]',
+                  }[colorScheme],
+                )}
+                disabled={option.disabled}
+                key={option.value}
+                onMouseEnter={() => {
+                  onOptionMouseEnter?.(option.value);
+                }}
+                value={option.value}
+              >
+                {option.type === 'color' ? (
+                  <span
+                    className={clsx(
+                      'block size-full rounded-full border group-disabled:opacity-20',
+                      {
+                        light:
+                          'border-[var(--swatch-radio-group-light-option-border,hsl(var(--foreground)/10%))]',
+                        dark: 'border-[var(--swatch-radio-group-dark-option-border,hsl(var(--background)/10%))]',
+                      }[colorScheme],
+                    )}
+                    style={{ backgroundColor: option.color }}
+                  />
+                ) : (
+                  <span
+                    className={clsx(
+                      'relative block size-full overflow-hidden rounded-full border',
+                      {
+                        light:
+                          'border-[var(--swatch-radio-group-light-option-border,hsl(var(--foreground)/10%))]',
+                        dark: 'border-[var(--swatch-radio-group-dark-option-border,hsl(var(--background)/10%))]',
+                      }[colorScheme],
+                    )}
+                  >
+                    <Image alt={option.image.alt} height={40} src={option.image.src} width={40} />
+                  </span>
+                )}
+                <div
                   className={clsx(
-                    'block size-full rounded-full border group-disabled:opacity-20',
+                    'disabled-icon absolute inset-0 hidden place-content-center',
                     {
-                      light:
-                        'border-[var(--swatch-radio-group-light-option-border,hsl(var(--foreground)/10%))]',
-                      dark: 'border-[var(--swatch-radio-group-dark-option-border,hsl(var(--background)/10%))]',
-                    }[colorScheme],
-                  )}
-                  style={{ backgroundColor: option.color }}
-                />
-              ) : (
-                <span
-                  className={clsx(
-                    'relative block size-full overflow-hidden rounded-full border',
-                    {
-                      light:
-                        'border-[var(--swatch-radio-group-light-option-border,hsl(var(--foreground)/10%))]',
-                      dark: 'border-[var(--swatch-radio-group-dark-option-border,hsl(var(--background)/10%))]',
+                      light: 'text-[var(--swatch-radio-group-light-icon,hsl(var(--foreground)))]',
+                      dark: 'text-[var(--swatch-radio-group-dark-icon,hsl(var(--background)))]',
                     }[colorScheme],
                   )}
                 >
-                  <Image alt={option.image.alt} height={40} src={option.image.src} width={40} />
-                </span>
-              )}
-              <div
-                className={clsx(
-                  'disabled-icon absolute inset-0 hidden place-content-center',
-                  {
-                    light: 'text-[var(--swatch-radio-group-light-icon,hsl(var(--foreground)))]',
-                    dark: 'text-[var(--swatch-radio-group-dark-icon,hsl(var(--background)))]',
-                  }[colorScheme],
-                )}
+                  <X size={16} strokeWidth={1.5} />
+                </div>
+              </RadioGroupPrimitive.Item>
+            );
+
+            if (option.type !== 'image') {
+              return item;
+            }
+
+            const popoverImage = option.popoverImage ?? option.image;
+
+            return (
+              <Tooltip
+                className="w-40 space-y-2 p-2"
+                delayDuration={150}
+                key={option.value}
+                trigger={item}
               >
-                <X size={16} strokeWidth={1.5} />
-              </div>
-            </RadioGroupPrimitive.Item>
-          ))}
+                <div className="relative aspect-square w-full overflow-hidden rounded-lg">
+                  <Image alt={popoverImage.alt} fill sizes="160px" src={popoverImage.src} />
+                </div>
+                <p className="text-center text-sm font-medium text-foreground">{option.label}</p>
+              </Tooltip>
+            );
+          })}
         </RadioGroupPrimitive.Root>
+        {selectedOption && (
+          <p
+            className={clsx(
+              'text-sm font-medium',
+              {
+                light: 'text-foreground',
+                dark: 'text-background',
+              }[colorScheme],
+            )}
+          >
+            {selectedOption.label}
+          </p>
+        )}
         {errors?.map((error) => (
           <FieldError key={error}>{error}</FieldError>
         ))}

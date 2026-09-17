@@ -69,6 +69,7 @@ type SwatchRadioFieldOption =
       value: string;
       label: string;
       image: { src: string; alt: string };
+      popoverImage?: { src: string; alt: string };
       disabled?: boolean;
     };
 

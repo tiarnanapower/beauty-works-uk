@@ -73,6 +73,12 @@ runtime.registerComponent(MSProductsCarousel, {
       ],
       defaultValue: 'light',
     }),
+    visibleProducts: Number({
+      label: 'Visible products',
+      min: 1,
+      max: 6,
+      defaultValue: 4,
+    }),
     showScrollbar: Checkbox({
       label: 'Show scrollbar',
       defaultValue: true,

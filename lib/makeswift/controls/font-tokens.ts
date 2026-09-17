@@ -4,17 +4,17 @@ export const fontFamilyTokens = {
   heading: Font({
     label: 'Heading',
     variant: false,
-    defaultValue: { fontFamily: 'var(--font-family-dm-serif-text)' },
+    defaultValue: { fontFamily: 'var(--font-family-mulish)' },
   }),
   body: Font({
     label: 'Body',
     variant: false,
-    defaultValue: { fontFamily: 'var(--font-family-inter)' },
+    defaultValue: { fontFamily: 'var(--font-family-mulish)' },
   }),
   accent: Font({
     label: 'Accent',
     variant: false,
-    defaultValue: { fontFamily: 'var(--font-family-roboto-mono)' },
+    defaultValue: { fontFamily: 'var(--font-family-mulish)' },
   }),
 };
 
