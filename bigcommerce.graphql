@@ -427,6 +427,46 @@ type ApplyCheckoutSpamProtectionResult {
   checkout: Checkout
 }
 
+"""
+Marker payload; rotated cookies are conveyed via Set-Cookie response headers, not in the JSON body.
+"""
+type ApplyMcpSessionSyncCodeData {
+  """Always true when this variant is returned."""
+  success: Boolean!
+}
+
+"""Error that occurred as a result of applySessionSyncCode mutation."""
+union ApplyMcpSessionSyncCodeError = ApplyMcpSessionSyncCodeInvalidCodeError | ApplyMcpSessionSyncCodeSessionNotFoundError
+
+"""Input for the applySessionSyncCode mutation."""
+input ApplyMcpSessionSyncCodeInput {
+  """One-time UUID sync code issued by MCP after a session-rotating action."""
+  code: String!
+}
+
+"""The sync code was invalid or has expired."""
+type ApplyMcpSessionSyncCodeInvalidCodeError implements Error {
+  """A description of the error in user language."""
+  message: String!
+}
+
+"""
+Result of the applySessionSyncCode mutation. Rotated cookies are returned via Set-Cookie response headers.
+"""
+type ApplyMcpSessionSyncCodeResult {
+  """Success marker when the code was redeemed and cookies were issued."""
+  result: ApplyMcpSessionSyncCodeData
+
+  """Errors that occurred (e.g. invalid code or missing session)."""
+  errors: [ApplyMcpSessionSyncCodeError!]!
+}
+
+"""The storefront session linked to the sync code no longer exists."""
+type ApplyMcpSessionSyncCodeSessionNotFoundError implements Error {
+  """A description of the error in user language."""
+  message: String!
+}
+
 """Assign cart to the customer input object."""
 input AssignCartToCustomerInput {
   """The cart id."""
@@ -1338,6 +1378,12 @@ type CompanyMutations {
     """The id of the address to delete."""
     input: DeleteCompanyAddressInput!
   ): DeleteCompanyAddressResult! @deprecated(reason: "Alpha version. Do not use in production.")
+
+  """Update the authenticated B2B company user's extra fields."""
+  updateCurrentUser(
+    """The B2B extra fields to set on the authenticated company user."""
+    input: UpdateCurrentUserInput!
+  ): UpdateCurrentUserResult! @deprecated(reason: "Alpha version. Do not use in production.")
 }
 
 """The status of a company."""
@@ -1356,6 +1402,23 @@ enum CompanyStatus {
 
   """Company registration has been rejected."""
   REJECTED
+}
+
+"""
+The B2B extra fields to set on the authenticated company user, grouped by value type.
+"""
+input CompanyUserExtraFieldsInput {
+  """Multiple choice extra field values to set."""
+  multipleChoices: [MultipleChoiceExtraFieldInput!]
+
+  """Number extra field values to set."""
+  numbers: [NumberExtraFieldInput!]
+
+  """Text extra field values to set."""
+  texts: [TextExtraFieldInput!]
+
+  """Multiline text extra field values to set."""
+  multilineTexts: [MultilineTextExtraFieldInput!]
 }
 
 """
@@ -2011,6 +2074,40 @@ interface Error {
   message: String!
 }
 
+"""Opaque one-time token for MCP session sync."""
+type GenerateMcpSessionSyncTokenData {
+  """One-time token."""
+  token: String!
+}
+
+"""Error that occurred as a result of generateSessionSyncToken mutation."""
+union GenerateMcpSessionSyncTokenError = GenerateMcpSessionSyncTokenNoSession | GenerateMcpSessionSyncTokenMissingCookies
+
+"""
+The request's session cookies did not match the session: a cookie the session expects is missing or its value differs.
+"""
+type GenerateMcpSessionSyncTokenMissingCookies implements Error {
+  """A description of the error in user language."""
+  message: String!
+}
+
+"""No storefront session available to sync."""
+type GenerateMcpSessionSyncTokenNoSession implements Error {
+  """A description of the error in user language."""
+  message: String!
+}
+
+"""Result of the generateSessionSyncToken mutation."""
+type GenerateMcpSessionSyncTokenResult {
+  """The generated token data when successful."""
+  result: GenerateMcpSessionSyncTokenData
+
+  """
+  Errors that occurred (e.g. no session or not available for server-to-server).
+  """
+  errors: [GenerateMcpSessionSyncTokenError!]!
+}
+
 """
 Error that occurred as a result of generateSessionSyncJwtToken mutation when cartId is provided and not found.
 """
@@ -2184,6 +2281,20 @@ type LogoutResult {
   cartUnassignResult: CartUnassignResult!
 }
 
+"""MCP (Model Context Protocol) session sync mutations."""
+type McpMutations {
+  """Generate one-time token to sync storefront session with MCP session."""
+  generateSessionSyncToken: GenerateMcpSessionSyncTokenResult!
+
+  """
+  Redeem a one-time sync code from MCP and re-issue rotated storefront session cookies via Set-Cookie.
+  """
+  applySessionSyncCode(
+    """Input for the applySessionSyncCode mutation."""
+    input: ApplyMcpSessionSyncCodeInput!
+  ): ApplyMcpSessionSyncCodeResult!
+}
+
 """The user input for multiline text extra fields."""
 input MultilineTextExtraFieldInput {
   """The label/name of the extra field."""
@@ -2334,14 +2445,17 @@ type Mutation {
   """Company mutations."""
   company: CompanyMutations!
 
+  """The payment mutations."""
+  payment: PaymentMutations!
+
+  """MCP (Model Context Protocol) session sync mutations."""
+  mcp: McpMutations!
+
   """The catalog mutations."""
   catalog: CatalogMutations!
 
   """The customer mutations."""
   customer: CustomerMutations!
-
-  """The payment mutations."""
-  payment: PaymentMutations!
 
   """Newsletter mutations."""
   newsletter: NewsletterMutations!
@@ -2890,9 +3004,6 @@ enum TokenScope {
   TOKEN_SCOPE_UNAUTHENTICATED
 }
 
-"""Scalar type representing a valid URL."""
-scalar URL
-
 """Unapply checkout coupon data object"""
 input UnapplyCheckoutCouponDataInput {
   """The checkout coupon code"""
@@ -3295,6 +3406,32 @@ type UpdateCompanyAddressResult {
   errors: [UpdateCompanyAddressError!]!
 }
 
+"""An error that occurred while updating the company user's extra fields."""
+type UpdateCompanyUserExtraFieldsError {
+  """The input field associated with the error."""
+  field: String!
+
+  """A human-readable error message."""
+  message: String!
+
+  """An optional machine-readable error code."""
+  code: String
+}
+
+"""
+The values to update on the authenticated B2B company user's extra fields.
+"""
+input UpdateCurrentUserInput {
+  """The B2B extra fields to set."""
+  extraFields: CompanyUserExtraFieldsInput!
+}
+
+"""Result of updating the authenticated company user's extra fields."""
+type UpdateCurrentUserResult {
+  """List of errors that occurred during the update."""
+  errors: [UpdateCompanyUserExtraFieldsError!]!
+}
+
 """Data fields to update on address."""
 input UpdateCustomerAddressDataInput {
   """First name of address owner."""
@@ -3597,17 +3734,7 @@ type ActiveCompany {
   """
   A paginated list of orders placed under the current customer's company.
   """
-  orders(before: String, after: String, first: Int, last: Int, filters: CompanyOrdersFiltersInput, sortBy: CompanyOrdersSortInput): OrdersConnection @deprecated(reason: "Alpha version. Do not use in production.")
-
-  """Company members who have placed at least one order."""
-  customersWithOrders(
-    """Filters to apply to customers with orders."""
-    filters: CustomerWithOrdersFiltersInput
-    before: String
-    after: String
-    first: Int
-    last: Int
-  ): CompanyCustomerConnection @deprecated(reason: "Alpha version. Do not use in production.")
+  orders(before: String, after: String, first: Int, last: Int, filters: CompanyOrdersFiltersInput, sortBy: CompanyOrdersSortInput): OrdersConnection
 }
 
 """A connection to a list of customer addresses."""
@@ -3689,6 +3816,163 @@ type AggregatedInventory {
 type Author {
   """Author name."""
   name: String!
+}
+
+"""Per-module B2B configuration toggles."""
+type B2BConfig {
+  """
+  Configuration toggles for the address module, or null if B2B address settings are unavailable for the store.
+  """
+  address: [B2BConfigField!] @deprecated(reason: "Alpha version. Do not use in production.")
+}
+
+"""A single B2B configuration toggle."""
+type B2BConfigField {
+  """
+  The identifier of the configuration toggle, for example `address_book`.
+  """
+  key: String!
+
+  """Whether the toggle is switched on for the store."""
+  isEnabled: Boolean!
+}
+
+"""A B2B extra field whose value is chosen from a fixed list."""
+type B2BDropdownExtraFieldDefinition implements B2BExtraFieldDefinition {
+  """The value applied when the shopper supplies none."""
+  defaultValue: String
+
+  """The values the shopper may choose from."""
+  options: [String!]!
+
+  """
+  The identifier used when reading or writing a value for this extra field.
+  """
+  fieldName: String!
+
+  """The label to display for the extra field."""
+  labelName: String!
+
+  """Whether a value for this extra field is required."""
+  isRequired: Boolean!
+
+  """
+  Whether the merchant has made this extra field visible to storefront shoppers.
+  """
+  visibleToEndUser: Boolean!
+}
+
+"""
+The definition of a merchant-configured B2B extra field, describing how the field should be presented and validated.
+"""
+interface B2BExtraFieldDefinition {
+  """
+  The identifier used when reading or writing a value for this extra field.
+  """
+  fieldName: String!
+
+  """The label to display for the extra field."""
+  labelName: String!
+
+  """Whether a value for this extra field is required."""
+  isRequired: Boolean!
+
+  """
+  Whether the merchant has made this extra field visible to storefront shoppers.
+  """
+  visibleToEndUser: Boolean!
+}
+
+"""The extra fields the merchant has defined for each B2B module."""
+type B2BExtraFields {
+  """
+  The extra field definitions for the address module, or null if B2B address settings are unavailable for the store.
+  """
+  address: [B2BExtraFieldDefinition!] @deprecated(reason: "Alpha version. Do not use in production.")
+}
+
+"""A B2B extra field that holds multiple lines of text."""
+type B2BMultilineTextExtraFieldDefinition implements B2BExtraFieldDefinition {
+  """The value applied when the shopper supplies none."""
+  defaultText: String
+
+  """The number of rows to display for the field, or null if unspecified."""
+  rows: Int
+
+  """
+  The identifier used when reading or writing a value for this extra field.
+  """
+  fieldName: String!
+
+  """The label to display for the extra field."""
+  labelName: String!
+
+  """Whether a value for this extra field is required."""
+  isRequired: Boolean!
+
+  """
+  Whether the merchant has made this extra field visible to storefront shoppers.
+  """
+  visibleToEndUser: Boolean!
+}
+
+"""A B2B extra field that holds a number."""
+type B2BNumberExtraFieldDefinition implements B2BExtraFieldDefinition {
+  """The value applied when the shopper supplies none."""
+  defaultNumber: Float
+
+  """The largest value allowed, or null if unbounded."""
+  maxValue: Float
+
+  """
+  The identifier used when reading or writing a value for this extra field.
+  """
+  fieldName: String!
+
+  """The label to display for the extra field."""
+  labelName: String!
+
+  """Whether a value for this extra field is required."""
+  isRequired: Boolean!
+
+  """
+  Whether the merchant has made this extra field visible to storefront shoppers.
+  """
+  visibleToEndUser: Boolean!
+}
+
+"""B2B settings for the store."""
+type B2BSettings {
+  """Which B2B modules are enabled for the store."""
+  config: B2BConfig
+
+  """The extra fields the merchant has defined for each B2B module."""
+  extraFields: B2BExtraFields
+}
+
+"""A B2B extra field that holds a single line of text."""
+type B2BTextExtraFieldDefinition implements B2BExtraFieldDefinition {
+  """The value applied when the shopper supplies none."""
+  defaultText: String
+
+  """The maximum number of characters allowed, or null if unlimited."""
+  maxLength: Int
+
+  """
+  The identifier used when reading or writing a value for this extra field.
+  """
+  fieldName: String!
+
+  """The label to display for the extra field."""
+  labelName: String!
+
+  """Whether a value for this extra field is required."""
+  isRequired: Boolean!
+
+  """
+  Whether the merchant has made this extra field visible to storefront shoppers.
+  """
+  visibleToEndUser: Boolean!
 }
 
 """Banner details."""
@@ -3865,6 +4149,29 @@ interface BaseOrder {
   Permalink URL for the order confirmation page. Returns a URL for supported orders, null for unsupported orders.
   """
   permalink: String @deprecated(reason: "Alpha version. Do not use in production.")
+
+  """Purchase order number associated with the order."""
+  poNumber: String
+
+  """Buyer reference associated with the order."""
+  reference: String
+
+  """B2B company attributed to the order."""
+  company: OrderCompany
+
+  """B2B order history events."""
+  history: [OrderHistoryEvent!]
+
+  """B2B order extra fields."""
+  extraFields: [OrderExtraFieldValue!]
+
+  """Invoice associated with the order, when the order has one."""
+  invoice: OrderInvoice
+
+  """
+  The B2B user who placed the order, or null when attribution is unavailable.
+  """
+  placedBy: OrderPlacedBy
 }
 
 """Blog details."""
@@ -4088,6 +4395,9 @@ type Brand implements Node {
     When set to True, hides products which are out of stock. Defaults to False. This filter will do nothing unless your store has the Product Filtering feature available on your plan and enabled. If it is supplied when your store does not have the feature enabled, it will be silently ignored.
     """
     hideOutOfStock: Boolean
+
+    """Sort order for the brand's products."""
+    sortBy: BrandProductSort
   ): ProductConnection!
 
   """Metafield data related to a brand."""
@@ -4141,6 +4451,18 @@ type BrandPageBannerEdge {
 
   """A cursor for use in pagination."""
   cursor: String!
+}
+
+"""Product sorting for a brand's product listing."""
+enum BrandProductSort {
+  A_TO_Z
+  BEST_REVIEWED
+  BEST_SELLING
+  FEATURED
+  HIGHEST_PRICE
+  LOWEST_PRICE
+  NEWEST
+  Z_TO_A
 }
 
 """Redirect to a brand."""
@@ -4607,6 +4929,11 @@ type CartDiscount {
 
   """Discounted amount in display currency."""
   discountedAmountInDisplayCurrency: Money!
+
+  """
+  Name shown to the shopper for this discount. Merchants set it on manual discounts.
+  """
+  displayName: String @deprecated(reason: "Alpha version. Do not use in production.")
 }
 
 """Cart gift certificate"""
@@ -6195,39 +6522,6 @@ input CompanyAddressSortInput {
   direction: CompanyAddressSortDirection!
 }
 
-"""A company member who has placed at least one order."""
-type CompanyCustomer {
-  """The unique numeric identifier of the customer."""
-  entityId: Int!
-
-  """The first name of the customer."""
-  firstName: String!
-
-  """The last name of the customer."""
-  lastName: String!
-
-  """The email address of the customer."""
-  email: String!
-}
-
-"""A connection to company customers with orders."""
-type CompanyCustomerConnection {
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """A list of company customer edges."""
-  edges: [CompanyCustomerEdge!]
-}
-
-"""An edge in a company customer connection."""
-type CompanyCustomerEdge {
-  """The customer."""
-  node: CompanyCustomer!
-
-  """A cursor for use in pagination."""
-  cursor: String!
-}
-
 """Filters to apply when querying company orders."""
 input CompanyOrdersFiltersInput {
   """Filter by order status labels."""
@@ -6265,7 +6559,7 @@ enum CompanyOrdersSortInput {
 """Queries for B2B company data."""
 type CompanyQueries {
   """Paginated list of addresses associated with the customer's company."""
-  addresses(before: String, after: String, first: Int, last: Int, filters: CompanyAddressFiltersInput, sort: [CompanyAddressSortInput!], includesExtraFields: Boolean = false): CompanyAddressConnection!
+  addresses(before: String, after: String, first: Int, last: Int, filters: CompanyAddressFiltersInput, sort: [CompanyAddressSortInput!], includesExtraFields: Boolean = false): CompanyAddressConnection! @deprecated(reason: "Deprecated, please use 'customer.activeCompany.addresses' instead")
 
   """A single company address by id."""
   address(
@@ -6821,14 +7115,11 @@ enum CustomerOrdersSortInput {
   """Sort by order creation date, oldest first."""
   CREATED_AT_OLDEST
 
+  """Sort by order ID in ascending order."""
+  ID_ASCENDING
+
   """Sort by order ID in descending order."""
   ID_DESCENDING
-}
-
-"""Filters applied to customers with orders."""
-input CustomerWithOrdersFiltersInput {
-  """Filter customers by company IDs."""
-  companyIds: [ID!]
 }
 
 """Customers settings."""
@@ -8387,6 +8678,29 @@ type Order implements Node & BaseOrder {
   Permalink URL for the order confirmation page. Returns a URL for supported orders, null for unsupported orders.
   """
   permalink: String @deprecated(reason: "Alpha version. Do not use in production.")
+
+  """Purchase order number associated with the order."""
+  poNumber: String
+
+  """Buyer reference associated with the order."""
+  reference: String
+
+  """B2B company attributed to the order."""
+  company: OrderCompany
+
+  """B2B order history events."""
+  history: [OrderHistoryEvent!]
+
+  """B2B order extra fields."""
+  extraFields: [OrderExtraFieldValue!]
+
+  """Invoice associated with the order, when the order has one."""
+  invoice: OrderInvoice
+
+  """
+  The B2B user who placed the order, or null when attribution is unavailable.
+  """
+  placedBy: OrderPlacedBy
 }
 
 """An address for an order."""
@@ -8480,6 +8794,15 @@ type OrderBillingAddress implements OrderAddress {
 
   """Email address."""
   email: String
+}
+
+"""A B2B company attributed to an order."""
+type OrderCompany {
+  """The company's unique numeric identifier."""
+  entityId: Int!
+
+  """Company name."""
+  name: String!
 }
 
 """A consignment for an order."""
@@ -8621,6 +8944,15 @@ type OrderEmailConsignments {
   giftCertificates(before: String, after: String, first: Int, last: Int): OrderGiftCertificateConsignmentConnection!
 }
 
+"""A merchant-defined extra field captured on the order."""
+type OrderExtraFieldValue {
+  """The extra field identifier (e.g. "extra_int_1")."""
+  name: String!
+
+  """The extra field value serialized as a string."""
+  value: String!
+}
+
 """A fee applied to an order."""
 type OrderFee {
   """Fee ID."""
@@ -8708,6 +9040,39 @@ type OrderGiftCertificateLineItemEdge {
 
   """A cursor for use in pagination."""
   cursor: String!
+}
+
+"""A B2B order lifecycle event."""
+type OrderHistoryEvent {
+  """Event ID."""
+  id: ID!
+
+  """The type of lifecycle event."""
+  eventType: OrderHistoryEventType!
+
+  """Order status label captured for the event."""
+  statusLabel: String!
+
+  """Where the event originated (e.g. B2B, webhook, sync job)."""
+  source: String
+
+  """Date and time when the event occurred."""
+  createdAt: DateTime!
+}
+
+"""The type of B2B order lifecycle event."""
+enum OrderHistoryEventType {
+  """The order was created."""
+  ORDER_CREATED
+
+  """The order was updated."""
+  ORDER_UPDATED
+}
+
+"""A B2B invoice reference for an order."""
+type OrderInvoice {
+  """The invoice's unique identifier."""
+  id: ID!
 }
 
 """An interface for different order line item types"""
@@ -8898,6 +9263,21 @@ type OrderPickupLocationAddress {
 
   """Phone number."""
   phone: String
+}
+
+"""The B2B user attribution for who placed an order."""
+type OrderPlacedBy {
+  """The BC customer ID of the user who placed the order."""
+  entityId: Int!
+
+  """The first name of the user who placed the order."""
+  firstName: String
+
+  """The last name of the user who placed the order."""
+  lastName: String
+
+  """The email address of the user who placed the order."""
+  email: String
 }
 
 """A shipment for an order."""
@@ -9222,6 +9602,29 @@ type OrderWithPayments implements Node & BaseOrder {
   Permalink URL for the order confirmation page. Returns a URL for supported orders, null for unsupported orders.
   """
   permalink: String @deprecated(reason: "Alpha version. Do not use in production.")
+
+  """Purchase order number associated with the order."""
+  poNumber: String
+
+  """Buyer reference associated with the order."""
+  reference: String
+
+  """B2B company attributed to the order."""
+  company: OrderCompany
+
+  """B2B order history events."""
+  history: [OrderHistoryEvent!]
+
+  """B2B order extra fields."""
+  extraFields: [OrderExtraFieldValue!]
+
+  """Invoice associated with the order, when the order has one."""
+  invoice: OrderInvoice
+
+  """
+  The B2B user who placed the order, or null when attribution is unavailable.
+  """
+  placedBy: OrderPlacedBy
 }
 
 """A connection to a list of orders."""
@@ -10544,7 +10947,7 @@ type Query {
   geography: Geography!
 
   """Access B2B company queries for the authenticated customer."""
-  company: CompanyQueries
+  company: CompanyQueries @deprecated(reason: "Deprecated, please use 'customer.activeCompany' instead")
 }
 
 """Radio buttons form field."""
@@ -11228,6 +11631,9 @@ type Settings {
   The form fields to display on the storefront during customer registration or address creation.
   """
   formFields: FormFields!
+
+  """B2B settings for the store."""
+  b2b: B2BSettings @deprecated(reason: "Alpha version. Do not use in production.")
 
   """Store seo information."""
   seo: SeoDetails
@@ -11949,6 +12355,9 @@ type TextFormFieldValue implements CustomerFormFieldValue {
   name: String!
 }
 
+"""Scalar type representing a valid URL."""
+scalar URL
+
 """Scalar type representing a universally unique identifier (UUID)."""
 scalar UUID
 
@@ -11968,6 +12377,11 @@ type UrlField {
 
   """Checkout url."""
   checkoutUrl: String
+
+  """
+  Payment base URL of the payments service used by the storefront, e.g. https://payments.bigcommerce.com.
+  """
+  paymentBaseUrl: URL @deprecated(reason: "Alpha version. Do not use in production.")
 }
 
 """Variant"""
