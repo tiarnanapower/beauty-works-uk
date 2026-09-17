@@ -174,14 +174,32 @@ async function loginWithJwt(credentials: unknown): Promise<User | null> {
   };
 }
 
+// Auth.js derives BOTH the `__Secure-` cookie name prefix and the Secure attribute from this
+// flag (defaultCookies() in @auth/core), then merges the `cookies` overrides below on top of the
+// result. So anything hardcoded there has to agree with it, and patchSessionTokenCookies has to
+// write the same values: a partitioned and an unpartitioned cookie of the same name live in
+// separate jars, so a mismatch leaves two session tokens that diverge across login/logout and
+// strand a stale one on sign out. An unprefixed name carrying Secure (or a `__Secure-` name
+// without it) is worse still — the browser rejects it. Pinning the flag keeps all three in step.
+//
+// Defaults to on for production builds, which are served over HTTPS. Set AUTH_SECURE_COOKIES to
+// force it either way — use `true` to run the Makeswift builder against a local HTTPS tunnel.
+const useSecureCookies =
+  process.env.AUTH_SECURE_COOKIES === undefined
+    ? process.env.NODE_ENV === 'production'
+    : process.env.AUTH_SECURE_COOKIES === 'true';
+
+// SameSite=None + Partitioned (CHIPS) is what lets the session survive inside the Makeswift
+// Builder's cross-site canvas, but both require Secure, so plain-HTTP dev falls back to a
+// first-party Lax cookie.
+const SESSION_COOKIE_OPTIONS = useSecureCookies
+  ? ({ partitioned: true, secure: true, sameSite: 'none' } as const)
+  : ({ partitioned: false, secure: false, sameSite: 'lax' } as const);
+
 const partitionedCookie = (name?: string) =>
   ({
     ...(name !== undefined ? { name } : {}),
-    options: {
-      partitioned: true,
-      secure: true,
-      sameSite: 'none',
-    },
+    options: SESSION_COOKIE_OPTIONS,
   }) as const;
 
 const config = {
@@ -189,6 +207,8 @@ const config = {
   // When handling sensitive actions like sign in, sign out, etc., the library will automatically check for CSRF tokens.
   // If you need to implement your own sensitive actions, you will need to implement CSRF checks yourself.
   skipCSRFCheck: undefined,
+  // Pinned so the cookie name prefix and the attributes written by both code paths always agree.
+  useSecureCookies,
   // Set this environment variable if you want to trust the host when using `next build` & `next start`.
   // Otherwise, this will be controlled by process.env.NODE_ENV within the library.
   trustHost: process.env.AUTH_TRUST_HOST === 'true' ? true : undefined,
@@ -350,10 +370,9 @@ async function patchSessionTokenCookies() {
   cookieJar.getAll().forEach(({ name, value }) => {
     if (SESSION_TOKEN_NAME_RE.test(name) && value) {
       cookieJar.set(name, value, {
+        ...SESSION_COOKIE_OPTIONS,
         httpOnly: true,
-        sameSite: 'lax' as const,
         path: '/',
-        secure: name.startsWith('__Secure-'),
       });
     }
   });
