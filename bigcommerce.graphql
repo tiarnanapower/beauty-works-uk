@@ -1457,6 +1457,9 @@ input CreateCartInput {
 
   """Locale of the cart"""
   locale: String
+
+  """The external source that the cart originated from."""
+  externalSource: String
 }
 
 """Create cart's metafield data."""
@@ -1567,6 +1570,9 @@ input CreateCheckoutInput {
 
   """List of coupon codes to apply to the checkout"""
   coupons: [String!]
+
+  """The external source that the checkout originated from."""
+  externalSource: String
 }
 
 """Create checkout result"""
@@ -4695,6 +4701,9 @@ type Cart implements Node {
 
   """The current version of the cart, which is updated with every change."""
   version: Int
+
+  """The external source that the cart originated from."""
+  externalSource: String
 
   """Metafield data related to a cart."""
   metafields(
@@ -8883,6 +8892,14 @@ type OrderDigitalLineItem implements OrderLineItemInterface {
   """List of product options."""
   productOptions: [OrderLineItemProductOption!]!
 
+  """ID of parent line item."""
+  parentLineItemEntityId: Int
+
+  """
+  Hashed ID of the picklist option on the parent line item that added this item, if this item was added by a picklist option.
+  """
+  addedByAttributeId: String
+
   """Image for the item."""
   image: Image
 
@@ -9100,6 +9117,11 @@ type OrderLineItemProductOption {
 
   """The product option value ID."""
   productAttributeValueEntityId: Int
+
+  """
+  Hashed ID for this product option. Matches the addedByAttributeId of any bundled line item this option added.
+  """
+  attributeId: String
 }
 
 """A wrapping for an order line item."""
@@ -9173,6 +9195,11 @@ type OrderPhysicalLineItem implements OrderLineItemInterface {
 
   """Backorder Message for the line item."""
   backorderMessage: String
+
+  """
+  Hashed ID of the picklist option on the parent line item that added this item, if this item was added by a picklist option.
+  """
+  addedByAttributeId: String
 }
 
 """A connection to a list of physical line items."""
@@ -11880,6 +11907,22 @@ type Site {
   """
   paymentMethods(before: String, after: String, first: Int, last: Int): PaymentMethodConnection @deprecated(reason: "Alpha version. Do not use in production.")
 
+  """List of payment wallets."""
+  paymentWallets(
+    """Payment wallets filter."""
+    filter: PaymentWalletsFilterInput
+    before: String
+    after: String
+    first: Int
+    last: Int
+  ): PaymentWalletConnection!
+
+  """A single payment wallet with initialization data."""
+  paymentWalletWithInitializationData(
+    """Payment wallet with initialization data filter."""
+    filter: PaymentWalletWithInitializationDataFilterInput!
+  ): PaymentWalletWithInitializationData
+
   """Details of a brand."""
   brand(
     """Brand ID."""
@@ -11891,22 +11934,6 @@ type Site {
     """Order filter."""
     filter: OrderFilterInput
   ): OrderWithPayments
-
-  """List of payment wallets."""
-  paymentWallets(
-    """Payment wallets filter."""
-    filter: PaymentWalletsFilterInput
-    before: String
-    after: String
-    first: Int
-    last: Int
-  ): PaymentWalletConnection! @deprecated(reason: "Alpha version. Do not use in production.")
-
-  """A single payment wallet with initialization data."""
-  paymentWalletWithInitializationData(
-    """Payment wallet with initialization data filter."""
-    filter: PaymentWalletWithInitializationDataFilterInput!
-  ): PaymentWalletWithInitializationData
 
   """Promotion for the current shopper."""
   promotion: Promotion!
@@ -13256,18 +13283,33 @@ enum currencyCode {
   UZS
   VEB
   VEF
+  VES
   VND
   VNN
   VUV
   WST
   XAF
+  XAG
+  XAU
+  XBA
+  XBB
+  XBC
+  XBD
   XCD
+  XCG
+  XDR
   XEU
   XFO
   XFU
   XOF
+  XPD
   XPF
+  XPT
   XRE
+  XSU
+  XTS
+  XUA
+  XXX
   YDD
   YER
   YUD
